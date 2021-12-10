@@ -15,6 +15,9 @@ ONEDRONE = False  # change to FALSE when working with drones
 
 UDP_PORT = 1234  # random number
 
+HOVER_Z_THRESHOLD = 0.5
+HOVER_Z = HOVER_Z_THRESHOLD * 1.1  # with safety margin
+
 drone_data_list = [DroneData(), DroneData()]  # global variable
 
 drone_data_list[0].ip = '192.168.86.82'  # TODO change ip address to drone address
@@ -63,19 +66,14 @@ def recalculate(wrap_up: bool):
     if drone0.start_x is None or drone1.start_x is None:
         logging.warning('start_x not set yet - returning from recalculate')
         return
-    if drone0.real_z() < 0.5:
-        logging.info('setting target for drone 0')
-        drone0.set_target(drone0.start_x, drone0.start_y, 0.55)
-    if drone1.real_z() < 0.5:
-        logging.info('setting target for drone 1')
-        drone1.set_target(drone1.start_x, drone1.start_y, 0.55)
-    if drone0.real_z() > 0.5 and drone1.real_z() > 0.5:
-        logging.info('setting target for both drones')
-        drone0.set_target(1, 2, 1)
-        drone1.set_target(drone0.target_x + 1, drone0.target_y, drone0.target_z)
-        # h = drone0.heading(drone1)
-        # x, y = drone0.relative(2, h)
-        # drone1.set_target(x, y, 1)
+    if drone0.real_z() < HOVER_Z_THRESHOLD:
+        logging.info('setting take-off for drone 0')
+        drone0.set_target(drone0.start_x, drone0.start_y, HOVER_Z)
+    if drone1.real_z() < HOVER_Z_THRESHOLD:
+        logging.info('setting take-off for drone 1')
+        drone1.set_target(drone1.start_x, drone1.start_y, HOVER_Z)
+    if drone0.real_z() > HOVER_Z_THRESHOLD and drone1.real_z() > HOVER_Z_THRESHOLD:
+        set_targets_for_square_mirror(drone0, drone1)
     if wrap_up:
         # send negative target z to land the drone
         drone0.target_z = -1.0
@@ -83,6 +81,50 @@ def recalculate(wrap_up: bool):
     send_to_drone(drone0, 0)
     send_to_drone(drone1, 1)
 
+
+def set_targets_for_square_mirror(drone0, drone1):
+    """
+    Simple  mirror
+    """
+    logging.info('Setting square mirror target for both drones')
+    set_target_for_square(drone0)
+    drone1.set_target(drone0.target_x, drone0.target_y, drone0.target_z)
+
+
+def set_target_for_square(drone: DroneData):
+    """
+    Set square flight path for this drone
+    :param drone:
+    """
+    assert drone.real_z() > HOVER_Z_THRESHOLD
+    radius = 1  # drone will fly to corners of (radius, radius) square
+    setpoint = radius * 1.2  # drone will fly beyond those corners
+    x = drone.real_x()
+    y = drone.real_y()
+    # quadrant is 0, 1, 2, 3 from top right clockwise
+    current_quadrant = 0 if x > 0 and y > 0 else (1 if x > 0 and y <= 0 else (2 if x <=0 and y <= 0 else 3))
+    inside_square = abs(x) < radius and abs(y) < radius
+    at_corner = abs(x) > (radius + setpoint) / 2 and abs(y) > (radius + setpoint) /2
+    target_quadrant = (current_quadrant + 1) % 4 if at_corner else current_quadrant
+    if at_corner:
+        logging.info(f'At corner of quadrant {current_quadrant} moving to {target_quadrant}')
+    if inside_square:
+        target_quadrant = 0
+    xy = [(setpoint, setpoint), (setpoint, -setpoint), (-setpoint, -setpoint), (-setpoint, setpoint)]
+    target_xy = xy[target_quadrant]
+    drone.set_target(target_xy[0], target_xy[1], HOVER_Z)
+
+def set_targets_for_circle(drone0, drone1):
+    """
+    Set drone targets such that drone1 circles drone0 at the same altitude
+
+    Expects drone0 to start at real world (0,0) and drone1 at real world (1,0)
+    """
+    drone1_start_x = 1  # implies real world (1, 0) start point
+    logging.info('setting target for both drones')
+    assert drone0.real_z() > HOVER_Z_THRESHOLD
+    drone0.set_target(1, 2, 1)
+    drone1.set_target(drone0.target_x + 1, drone0.target_y, drone0.target_z)
 
 def send_to_drone(drone_data: DroneData, id):
     """
