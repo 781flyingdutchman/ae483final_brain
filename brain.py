@@ -11,7 +11,7 @@ import logging
 from drone_data import DroneData
 
 LOGLEVEL = logging.DEBUG
-ONEDRONE = True  # change to FALSE when working with drones
+ONEDRONE = False  # change to FALSE when working with drones
 
 UDP_PORT = 1234  # random number
 
@@ -38,7 +38,7 @@ def drone_data_listener(wrap_up: Callable[[], bool]):
             else:
                 if len(data) == 16:
                     # struct contains 1 short (id) and 3 floats, representing x, y and z
-                    (drone_id, x, y, z) = struct.unpack('hfff', data)  # convert the received data from bytes to float
+                    (drone_id, x, y, z) = struct.unpack('ifff', data)  # convert the received data from bytes to float
                     logging.info(f'Incoming = {(drone_id, x, y, z)}')
                     drone_data = drone_data_list[drone_id]
                     drone_data.x = x
@@ -72,7 +72,7 @@ def recalculate(wrap_up: bool):
     if drone0.real_z() > 0.5 and drone1.real_z() > 0.5:
         logging.info('setting target for both drones')
         drone0.set_target(1, 2, 1)
-        drone1.set_target(drone0.target_x, drone0.target_y, drone0.target_z)
+        drone1.set_target(drone0.target_x + 1, drone0.target_y, drone0.target_z)
         # h = drone0.heading(drone1)
         # x, y = drone0.relative(2, h)
         # drone1.set_target(x, y, 1)
