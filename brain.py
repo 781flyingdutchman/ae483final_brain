@@ -8,6 +8,8 @@ from typing import Callable
 
 import logging
 
+import numpy
+
 from drone_data import DroneData
 
 LOGLEVEL = logging.DEBUG
@@ -22,8 +24,8 @@ DRONE1_Y_OFFSET = 0  # relative to Drone 0 at start
 
 drone_data_list = [DroneData(), DroneData()]  # global variable
 
-drone_data_list[0].ip = '192.168.86.82'  # TODO change ip address to drone address
-drone_data_list[1].ip = '192.168.86.82'  # TODO change ip address to drone address
+drone_data_list[0].ip = '192.168.208.79'  # TODO change ip address to drone address
+drone_data_list[1].ip = '192.168.208.79'  # TODO change ip address to drone address
 BRAIN_PORT = '8100'
 CLIENT0_PORT = '8080'
 CLIENT1_PORT = '8000'
@@ -112,7 +114,6 @@ def set_target_for_square(drone: DroneData):
     Set square flight path for this drone
     :param drone:
     """
-    assert drone.real_z() > HOVER_Z_THRESHOLD
     global target_quadrant
     radius = 1  # drone will fly to corners of (radius, radius) square
     setpoint = radius * 1.3  # drone will fly beyond those corners
@@ -172,9 +173,15 @@ def main():
 
         # zs = ([item[2] for item in tracks[i]])
         cs.extend([item[3] for item in tracks[i]])
-    plt.scatter(xs, ys, c=cs, alpha=0.8)
+    fig, axs = plt.subplots(3)
+    axs[0].scatter(xs, ys, c=cs, alpha=0.8)
+    axs[1].plot([item[2] for item in tracks[0]], 'r+')
+    axs[2].plot([item[2] for item in tracks[1]])
     plt.show()
     # print(tracks)
+
+
+
     # print(xs)
     # print(ys)
     # print(cs)
