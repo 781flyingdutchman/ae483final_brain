@@ -108,6 +108,7 @@ def set_targets_for_square_mirror(drone0, drone1):
     drone1.set_target(drone0.target_x, drone0.target_y, drone0.target_z)
 
 target_quadrant = 0
+at_first_corner = False
 
 def set_target_for_square(drone: DroneData):
     """
@@ -115,6 +116,7 @@ def set_target_for_square(drone: DroneData):
     :param drone:
     """
     global target_quadrant
+    global at_first_corner
     radius = 1  # drone will fly to corners of (radius, radius) square
     setpoint = radius * 1.3  # drone will fly beyond those corners
     x = drone.real_x()
@@ -124,9 +126,10 @@ def set_target_for_square(drone: DroneData):
     inside_square = abs(x) < radius and abs(y) < radius
     at_corner = abs(x) > (radius + setpoint) / 2 and abs(y) > (radius + setpoint) / 2
     if at_corner:
+        at_first_corner = True
         target_quadrant = (current_quadrant + 1) % 4
         logging.info(f'At corner of quadrant {current_quadrant} moving to {target_quadrant}')
-    if inside_square:
+    if not at_first_corner:
         # initially, move to corner of quadrant 0
         target_quadrant = 0
     xy = [(setpoint, setpoint), (setpoint, -setpoint), (-setpoint, -setpoint), (-setpoint, setpoint)]
