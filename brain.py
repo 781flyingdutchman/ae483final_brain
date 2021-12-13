@@ -162,6 +162,10 @@ def main():
     value = wrap_up = True
     t1.join()
     logging.info('Finished')
+    with open('drone_data_log', 'w') as f:
+        for i in range(2):
+            for j in range(len(tracks[i])):
+                f.write(f'{i},{tracks[i][j][0]},{tracks[i][j][1]},{tracks[i][j][2]}\n')
     # plot both tracks on one map
     xs = []
     ys = []
